@@ -80,17 +80,21 @@ export class World extends Scenario {
           const onVolvo = this.#input.wait("1", () => {
             onVolvo.off();
             this.scene.add(track);
+            volvo.scale.setScalar(1);
+            volvo.position.set(0, 0, 0);
             selected = new Volvo(volvo);
             this.scene.add(selected.model);
-            this.scene.remove(fh750)
+            this.scene.remove(fh750);
             this.#follower.setTarget(selected);
           });
           const onFH = this.#input.wait("2", () => {
             onFH.off();
             this.scene.add(track);
+            fh750.scale.setScalar(1);
+            fh750.position.set(0, 0, 0);
             selected = new FH750(fh750);
             this.scene.add(selected.model);
-            this.scene.remove(volvo)
+            this.scene.remove(volvo);
             this.#follower.setTarget(selected);
           });
         }
@@ -113,7 +117,7 @@ export class World extends Scenario {
           fh750.rotation.y += delta * 0.4;
         }
       } else {
-        selected.update(delta)
+        selected.update(delta);
         this.#follower.update();
       }
     });
