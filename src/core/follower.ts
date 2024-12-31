@@ -11,8 +11,8 @@ export class Follower {
    * da câmera em relação ao carro
    */
   #offset = {
-    back: new Vector3(0, 4, -16),
-    front: new Vector3(0, 4, 16),
+    back: new Vector3(0, 4, -14),
+    front: new Vector3(0, 4, 14),
   };
 
   #current = this.#offset.back;

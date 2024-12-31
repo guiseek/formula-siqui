@@ -1,9 +1,8 @@
 import { Group, Mesh, Object3D, Vector3 } from "three";
+import { DEG2RAD } from "three/src/math/MathUtils.js";
 import { Updatable } from "../interfaces";
 import { getByName } from "../utils";
 import { Input } from "../core";
-
-const DEG2RAD = Math.PI / 180;
 
 export class Volvo implements Updatable {
   #model: Group;
@@ -37,7 +36,7 @@ export class Volvo implements Updatable {
   /**
    * Gravidade em m/s²
    */
-  #gravity = 9.81;
+  // #gravity = 9.81;
 
   /**
    * Força de freio em N

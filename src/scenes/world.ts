@@ -1,173 +1,121 @@
-import { Camera, Follower, Input, Loader, Renderer } from "../core";
+import { Follower, Input, Loader, Scenario } from "../core";
+import { FH750, Volvo } from "../vehicles";
 import { Updatable } from "../interfaces";
-import { Volvo } from "../vehicles";
-import { Track } from "../scenes";
-import {
-  Scene,
-  Clock,
-  SpotLight,
-  PointLight,
-  AmbientLight,
-  PMREMGenerator,
-  DirectionalLight,
-} from "three";
-import { inner } from "../utils";
+import { Group } from "three";
 
-export class World {
-  #scene = new Scene();
-
-  #clock = new Clock();
-
-  #camera = new Camera();
-
-  #renderer = new Renderer(app);
-
-  #follower = new Follower(this.#camera);
-
-  #ambientLight = new AmbientLight(0xffffff, 0.5);
-
-  #pointLight = new PointLight(0xffaa00, 0.8, 30);
-
-  #directionalLight = new DirectionalLight(0xffffff, 1);
-
-  #spotLight = new SpotLight(0xffffff, 0.7, 50, Math.PI / 6);
-
-  #updatables = new Set<Updatable>();
-
-  #animation?: number;
+export class World extends Scenario {
+  #loader = Loader.getInstance();
 
   #input = Input.getInstance();
 
-  #loader = Loader.getInstance();
-
-  #pmremGenerator = new PMREMGenerator(this.#renderer);
-
-  #track?: Track;
-
-  #mcLaren?: Volvo;
+  #follower = new Follower(this.camera);
 
   constructor() {
-    this.#pmremGenerator.compileEquirectangularShader();
+    super();
 
-    this.#loader.rgbe.loadAsync("day_4k.hdr").then((texture) => {
-      const renderTarget = this.#pmremGenerator.fromEquirectangular(texture);
-      this.#scene.environment = renderTarget.texture;
-      this.#scene.background = renderTarget.texture;
-      renderTarget.texture.dispose();
-      this.#pmremGenerator.dispose();
-    });
+    this.load().then();
 
-    this.#scene.add(this.#ambientLight);
+    this.camera.position.z = 10;
 
-    this.#pointLight.position.set(2, 5, 2);
-    this.#pointLight.castShadow = true;
-    this.#scene.add(this.#pointLight);
-
-    /**
-     * Posição acima e à direita do ambiente
-     */
-    this.#directionalLight.position.set(5, 10, 5);
-
-    /**
-     * Ativa sombras
-     */
-    this.#directionalLight.castShadow = true;
-
-    /**
-     * Resolução do mapa de sombras
-     */
-    this.#directionalLight.shadow.mapSize.width = 1024;
-    this.#directionalLight.shadow.mapSize.height = 1024;
-
-    /**
-     * Plano próximo do mapa de sombras
-     */
-    this.#directionalLight.shadow.camera.near = 0.5;
-
-    /**
-     * Plano distante do mapa de sombras
-     */
-    this.#directionalLight.shadow.camera.far = 50;
-
-    this.#scene.add(this.#directionalLight);
-
-    this.#spotLight.position.set(-5, 10, -5);
-
-    /**
-     * Aponta para o centro do ambiente
-     */
-    this.#spotLight.target.position.set(0, 0, 0);
-    this.#spotLight.castShadow = true;
-
-    this.#scene.add(this.#spotLight);
-    this.#scene.add(this.#spotLight.target);
-
-    this.#loader.gltf.loadAsync("track.glb").then(({ scene }) => {
-      this.#track = new Track(scene);
-      this.#scene.add(this.#track.model);
-      this.#renderer.render(this.#scene, this.#camera);
-    });
-
-    addEventListener("resize", this.#onResize);
-
-    this.#input.on("v", () => {
-      this.#follower.toggleView();
-    });
-
-    this.#input.on("p", () => {
-      this.pause();
-    });
+    // this.#controls.minDistance = 10;
   }
 
-  load() {
-    this.#loader.gltf.loadAsync("volvo.glb").then(({ scene }) => {
-      this.#mcLaren = new Volvo(scene);
+  async load() {
+    let volvo: Group;
+    let fh750: Group;
+    let track: Group;
 
-      this.#updatables.add(this.#mcLaren);
+    let selected: Updatable;
 
-      this.#scene.add(this.#mcLaren.model);
+    let percent = {
+      volvo: 0,
+      fh750: 0,
+      track: 0,
+      envMap: 0,
+    };
 
-      this.#follower.setTarget(this.#mcLaren);
+    this.#loader.rgbe
+      .loadAsync("day_4k.hdr", ({ loaded, total }) => {
+        const computed = (loaded / total) * 100;
+        percent.envMap = parseInt(String(computed), 10);
+      })
+      .then((texture) => {
+        this.scene.environment = texture;
+        this.scene.background = texture;
+        texture.dispose();
+      });
 
-      this.start();
+    this.#loader.gltf
+      .loadAsync("volvo.glb", ({ loaded, total }) => {
+        const computed = (loaded / total) * 100;
+        percent.volvo = parseInt(String(computed), 10);
+      })
+      .then(({ scene }) => {
+        volvo = scene;
+        volvo.position.x -= 1.3;
+        volvo.scale.setScalar(0.6);
+
+        this.scene.add(volvo);
+      });
+
+    this.#loader.gltf
+      .loadAsync("track.glb", ({ loaded, total }) => {
+        const computed = (loaded / total) * 100;
+        percent.track = parseInt(String(computed), 10);
+      })
+      .then(({ scene }) => {
+        track = scene;
+      });
+
+    this.#loader.gltf
+      .loadAsync("fh-750.glb", ({ loaded, total }) => {
+        const computed = (loaded / total) * 100;
+        percent.fh750 = parseInt(String(computed), 10) ?? 100;
+        progress.value =
+          (percent.volvo + percent.track + percent.envMap + percent.fh750) / 4;
+
+        if (progress.value === 100) {
+          progress.hidden = true;
+
+          const onVolvo = this.#input.wait("1", () => {
+            onVolvo.off();
+            this.scene.add(track);
+            selected = new Volvo(volvo);
+            this.scene.add(selected.model);
+            this.scene.remove(fh750)
+            this.#follower.setTarget(selected);
+          });
+          const onFH = this.#input.wait("2", () => {
+            onFH.off();
+            this.scene.add(track);
+            selected = new FH750(fh750);
+            this.scene.add(selected.model);
+            this.scene.remove(volvo)
+            this.#follower.setTarget(selected);
+          });
+        }
+      })
+      .then(({ scene }) => {
+        fh750 = scene;
+        fh750.position.x += 1.3;
+        fh750.scale.setScalar(0.6);
+
+        this.scene.add(fh750);
+      });
+
+    this.start((delta) => {
+      if (!selected) {
+        if (volvo) {
+          volvo.rotation.y += delta * 0.4;
+        }
+
+        if (fh750) {
+          fh750.rotation.y += delta * 0.4;
+        }
+      } else {
+        selected.update(delta)
+        this.#follower.update();
+      }
     });
   }
-
-  start() {
-    this.#animation = this.#animate();
-    console.log(this.#animation);
-    
-  }
-
-  pause() {
-    if (this.#animation) this.stop();
-    else this.start();
-  }
-
-  stop() {
-    if (this.#animation) {
-      cancelAnimationFrame(this.#animation);
-    }
-  }
-
-  #animate = () => {
-    const delta = this.#clock.getDelta();
-
-    for (const object of this.#updatables) {
-      object.update(delta);
-    }
-
-    this.#follower.update();
-
-    this.#renderer.render(this.#scene, this.#camera);
-
-    return requestAnimationFrame(this.#animate);
-  };
-
-  #onResize = () => {
-    this.#camera.aspect = inner.ratio;
-    this.#camera.updateProjectionMatrix();
-    this.#renderer.setPixelRatio(devicePixelRatio);
-    this.#renderer.setSize(inner.width, inner.height);
-  };
 }

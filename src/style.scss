@@ -1,7 +1,26 @@
-html, body {
+html,
+body {
   height: 100vh;
 }
 
 body {
   margin: 0;
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  accent-color: lime;
+}
+
+#h1 {
+  z-index: 10;
+  position: fixed;
+  color: white;
+}
+
+#progress {
+  z-index: 10;
+  position: fixed;
+  color: white;
 }

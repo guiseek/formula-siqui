@@ -2,6 +2,8 @@ type ControlKey = "up" | "right" | "down" | "left" | "space";
 
 type EventKey = "p" | "v";
 
+type ChoiceKey = "1" | "2" | "3";
+
 export class Input {
   private static instance: Input;
 
@@ -22,6 +24,12 @@ export class Input {
     v: new Set<VoidFunction>(),
   };
 
+  #selected = {
+    1: new Set<VoidFunction>(),
+    2: new Set<VoidFunction>(),
+    3: new Set<VoidFunction>(),
+  };
+
   static getInstance() {
     if (!this.instance) {
       this.instance = new Input();
@@ -37,11 +45,17 @@ export class Input {
 
   #onKeyDown = ({ code }: KeyboardEvent) => {
     const key = this.#normalize(code);
+
     if (this.#isControl(key)) {
       this.#state[key] = true;
     }
+
     if (this.#isEvent(key)) {
       for (const cb of this.#listeners[key]) cb();
+    }
+
+    if (this.#isChoice(key)) {
+      for (const cb of this.#selected[key]) cb();
     }
   };
 
@@ -57,6 +71,11 @@ export class Input {
     return { off: () => this.#listeners[event].delete(callback) };
   }
 
+  wait(option: ChoiceKey, callback: VoidFunction) {
+    this.#selected[option].add(callback);
+    return { off: () => this.#selected[option].delete(callback) };
+  }
+
   #isControl(key: string): key is ControlKey {
     return Object.keys(this.#state).includes(key);
   }
@@ -65,7 +84,15 @@ export class Input {
     return ["p", "v"].includes(key);
   }
 
+  #isChoice(key: string): key is ChoiceKey {
+    return ["1", "2", "3"].includes(key);
+  }
+
   #normalize(code: string) {
-    return code.replace("Arrow", "").replace("Key", "").toLowerCase();
+    return code
+      .replace("Arrow", "")
+      .replace("Key", "")
+      .replace("Digit", "")
+      .toLowerCase();
   }
 }
